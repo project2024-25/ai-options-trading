@@ -1,0 +1,23 @@
+{
+  "nifty": {
+    "ltp": 24833.6,
+    "change": 81.15,
+    "volume": 0,
+    "ohlc": {
+      "open": 24825.1,
+      "high": 24892.6,
+      "low": 24677.3,
+      "close": 24752.45
+    }
+  },
+  "banknifty": {
+    "ltp": 55546.05,
+    "change": 129.05,
+    "volume": 0
+  },
+  "instruments_count": {
+    "nifty_options": 1734,
+    "banknifty_options": 1074
+  },
+  "timestamp": "2025-05-29T16:07:16.065121"
+}

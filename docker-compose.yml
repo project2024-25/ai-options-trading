@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  # PostgreSQL with TimescaleDB for your live NIFTY ₹24,833.6 data
+  postgres:
+    image: timescale/timescaledb:latest-pg14
+    container_name: trading_postgres
+    environment:
+      - POSTGRES_DB=trading_db
+      - POSTGRES_USER=trading_user
+      - POSTGRES_PASSWORD=your_secure_password
+      - POSTGRES_HOST_AUTH_METHOD=md5
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./services/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U trading_user -d trading_db"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for caching your live market data
+  redis:
+    image: redis:7-alpine
+    container_name: trading_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Your existing FastAPI services (if you have docker setup)
+  # fastapi:
+  #   build: 
+  #     context: .
+  #     dockerfile: services/Dockerfile
+  #   container_name: trading_api
+  #   ports:
+  #     - "8000:8000"
+  #   environment:
+  #     - DATABASE_URL=postgresql://trading_user:your_secure_password@postgres:5432/trading_db
+  #     - REDIS_URL=redis://redis:6379
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  default:
+    name: trading_network
