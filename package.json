@@ -1,0 +1,56 @@
+{
+    "name": "ai-options-trading",
+    "version": "1.0.0",
+    "description": "AI-powered options trading system with real-time dashboard",
+    "private": true,
+    "workspaces": [
+      "dashboard"
+    ],
+    "scripts": {
+      "install:all": "npm install && npm run install:dashboard",
+      "install:dashboard": "cd dashboard && npm install",
+      
+      "dev:services": "echo 'Starting all backend services...' && concurrently --prefix '[{name}]' --names 'data,tech,ml,strategy,risk,options' 'cd services/data-acquisition && python main.py' 'cd services/technical-analysis && python main.py' 'cd services/ml-service && python main.py' 'cd services/strategy-engine && python main.py' 'cd services/risk-management && python main.py' 'cd services/options-analytics && python main.py'",
+      
+      "dev:dashboard": "cd dashboard && npm run dev",
+      
+      "dev:all": "concurrently --kill-others --prefix '[{name}]' --names 'services,dashboard' 'npm run dev:services' 'npm run dev:dashboard'",
+      
+      "build:dashboard": "cd dashboard && npm run build",
+      "start:dashboard": "cd dashboard && npm start",
+      
+      "docker:build": "docker-compose build",
+      "docker:up": "docker-compose up",
+      "docker:down": "docker-compose down",
+      "docker:logs": "docker-compose logs -f",
+      
+      "test:services": "echo 'Testing backend services connectivity...'",
+      "test:dashboard": "cd dashboard && npm run typecheck",
+      "test:all": "npm run test:services && npm run test:dashboard",
+      
+      "clean": "rm -rf node_modules dashboard/node_modules dashboard/.next",
+      "reset": "npm run clean && npm run install:all"
+    },
+    "devDependencies": {
+      "concurrently": "^8.2.2"
+    },
+    "engines": {
+      "node": ">=18.0.0",
+      "npm": ">=8.0.0"
+    },
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/project2024-25/ai-options-trading"
+    },
+    "keywords": [
+      "trading",
+      "options",
+      "ai",
+      "nifty",
+      "banknifty",
+      "dashboard",
+      "real-time"
+    ],
+    "author": "Your Name",
+    "license": "MIT"
+  }

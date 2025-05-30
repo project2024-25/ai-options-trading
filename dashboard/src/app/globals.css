@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer base {
+  :root {
+    --background: 222 47% 11%; /* #1E293B - Almost-black */
+    --foreground: 210 40% 96%; /* Lighter gray/off-white for text */
+
+    --card: 222 47% 14%; /* Slightly lighter than background for cards */
+    --card-foreground: 210 40% 96%;
+
+    --popover: 222 47% 11%;
+    --popover-foreground: 210 40% 96%;
+
+    --primary: 210 29% 24%; /* #2C3E50 - Deep midnight blue */
+    --primary-foreground: 210 40% 96%;
+
+    --secondary: 210 29% 30%; /* A slightly lighter version of primary or a neutral gray */
+    --secondary-foreground: 210 40% 96%;
+
+    --muted: 210 29% 20%;
+    --muted-foreground: 210 40% 60%; /* Softer text color */
+
+    --accent: 207 68% 53%; /* #3498DB - Vibrant cool blue (as per hex, description was green) */
+    --accent-foreground: 20 0% 98%; /* High contrast text on accent */
+
+    --destructive: 0 72% 51%; /* Standard destructive red */
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 210 29% 20%; /* Darker border, related to primary/muted */
+    --input: 210 29% 20%;
+    --ring: 207 68% 53%; /* Accent color for rings */
+
+    --chart-1: 207 68% 53%; /* Accent */
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    
+    --radius: 0.5rem;
+
+    --sidebar-background: 210 29% 20%;
+    --sidebar-foreground: 210 40% 90%;
+    --sidebar-primary: 207 68% 53%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 210 29% 24%;
+    --sidebar-accent-foreground: 210 40% 96%;
+    --sidebar-border: 210 29% 17%;
+    --sidebar-ring: 207 68% 53%;
+  }
+
+  /* Remove .dark specific styles if default is dark, or keep if theme switching is desired */
+  /* For this project, we set :root to the dark theme directly */
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .animate-pulse-subtle {
+    animation: pulse-subtle 0.7s cubic-bezier(0.4, 0, 0.6, 1);
+  }
+}
