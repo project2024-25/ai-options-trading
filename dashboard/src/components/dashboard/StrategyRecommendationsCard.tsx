@@ -1,238 +1,259 @@
-'use client';
+// File: dashboard/src/components/StrategyRecommendationsCard.tsx
+// Enhanced version with specific trade details
 
-import type React from 'react';
-import { Lightbulb, ShieldCheck, BarChartBig, Activity, Layers, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
-import CardWrapper from '@/components/shared/CardWrapper';
-import { useDataFetching } from '@/hooks/useDataFetching';
-import { SERVICE_ENDPOINTS } from '@/lib/config';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
+"use client";
 
-// Interface matching your strategy API response
-interface StrategyApiResponse {
-  symbol?: string;
-  timestamp?: string;
-  market_analysis?: {
-    current_trend?: string;
-    volatility_regime?: string;
-    support_levels?: number[];
-    resistance_levels?: number[];
+import React, { useState, useEffect } from 'react';
+
+interface SpecificTrade {
+  strategy_name: string;
+  current_spot: number;
+  trade_type: string;
+  market_situation: string;
+  buy_contract: {
+    symbol: string;
+    strike: number;
+    ltp: number;
+    mid_price: number;
   };
-  recommended_strategy?: {
-    strategy_name?: string;
-    strategy_type?: string;
-    confidence_score?: number;
-    risk_reward_ratio?: string;
-    max_profit?: number | string;
-    max_loss?: number | string;
-    breakeven_points?: number[];
-    probability_of_profit?: number;
+  sell_contract: {
+    symbol: string;
+    strike: number;
+    ltp: number;
+    mid_price: number;
   };
-  strategy_details?: {
-    legs?: Array<{
-      action?: string;
-      option_type?: string;
-      strike?: number;
-      quantity?: number;
-      premium?: number;
-    }>;
-    net_premium?: number;
-    margin_required?: number;
+  trade_details: {
+    net_debit_credit: number;
+    lots: number;
+    lot_size: number;
+    total_quantity: number;
+    net_premium: number;
+    max_profit: number;
+    max_loss: number;
+    breakeven: number;
   };
-  market_conditions?: {
-    volatility_percentile?: number;
-    days_to_expiry?: number;
-    expected_move?: number;
-  };
-  // Handle API error responses
-  detail?: Array<{
-    type: string;
-    loc: string[];
-    msg: string;
-  }>;
+  execution_checklist: string[];
 }
 
-const ValueWithIcon: React.FC<{ icon: React.ElementType; label: string; value: string | number; unit?: string; badgeVariant?: "default" | "secondary" | "destructive" | "outline" | null | undefined; className?: string }> = ({ icon: Icon, label, value, unit, badgeVariant, className }) => (
-  <div className={`flex items-start space-x-2 text-sm ${className}`}>
-    <Icon className="h-4 w-4 text-accent mt-0.5" />
-    <span className="text-muted-foreground">{label}:</span>
-    {badgeVariant ? <Badge variant={badgeVariant}>{value}{unit}</Badge> : <span className="font-semibold">{value}{unit}</span>}
-  </div>
-);
-
 const StrategyRecommendationsCard: React.FC = () => {
-  const { data, isLoading, error, isOnline, lastUpdated } = useDataFetching<StrategyApiResponse>(SERVICE_ENDPOINTS.AUTO_SELECT);
+  const [specificTrade, setSpecificTrade] = useState<SpecificTrade | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
-  if (isLoading && !data) {
-     return (
-      <CardWrapper title="Strategy Recommendation" icon={Lightbulb} isLoading={true} error={null} isOnline={true} lastUpdated={null} serviceName="Strategy Service">
-        <div className="space-y-3 p-4">
-          <Skeleton className="h-6 w-3/4" />
-          <Skeleton className="h-4 w-1/2" />
-          <Skeleton className="h-4 w-2/3" />
-          <Skeleton className="h-4 w-1/2" />
-        </div>
-      </CardWrapper>
-    );
-  }
+  const fetchSpecificTrade = async (): Promise<void> => {
+    try {
+      setLoading(true);
+      
+      // Call your new specific trade endpoint
+      const response = await fetch(
+        'http://localhost:8004/api/strategy/specific-trade-direct?symbol=NIFTY&account_size=500000'
+      );
+      
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+      
+      const tradeData: SpecificTrade = await response.json();
+      
+      if (tradeData.error) {
+        throw new Error(tradeData.error);
+      }
+      
+      setSpecificTrade(tradeData);
+      setError(null);
+      setLastUpdated(new Date());
+      
+    } catch (err) {
+      console.error('Specific trade fetch error:', err);
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // Handle API validation errors (422 responses)
-  if (data && data.detail && Array.isArray(data.detail)) {
+  useEffect(() => {
+    fetchSpecificTrade();
+    
+    // Refresh every 2 minutes (since this is more expensive)
+    const interval = setInterval(fetchSpecificTrade, 120000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const formatCurrency = (amount: number): string => {
+    return `₹${Math.round(amount).toLocaleString()}`;
+  };
+
+  const formatTime = (date: Date): string => {
+    return date.toLocaleTimeString('en-US', { 
+      hour12: false, 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
+  const getTradeTypeColor = (tradeType: string): string => {
+    return tradeType === 'DEBIT' ? 'text-orange-400' : 'text-green-400';
+  };
+
+  const getRiskRewardRatio = (): number => {
+    if (!specificTrade) return 0;
+    const { max_profit, max_loss } = specificTrade.trade_details;
+    return max_loss > 0 ? max_profit / max_loss : 0;
+  };
+
+  if (loading) {
     return (
-      <CardWrapper
-        title="Strategy Recommendation"
-        icon={Lightbulb}
-        isLoading={isLoading}
-        error={null}
-        isOnline={false}
-        lastUpdated={lastUpdated}
-        serviceName="Strategy Service"
-      >
-        <div className="space-y-3">
-          <div className="flex items-center text-orange-500">
-            <AlertTriangle className="h-5 w-5 mr-2" />
-            <span className="font-semibold">Service Configuration Required</span>
+      <div className="bg-gray-800 rounded-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-2">
+            <span className="text-blue-400">🎯</span>
+            <h3 className="text-lg font-semibold text-white">Specific Trade Recommendation</h3>
           </div>
-          <p className="text-sm text-muted-foreground">
-            The strategy service needs additional parameters to generate recommendations.
-          </p>
-          <div className="text-xs text-muted-foreground space-y-1">
-            <p className="font-medium">Missing parameters:</p>
-            {data.detail.slice(0, 3).map((err, index) => (
-              <p key={index}>• {err.loc[err.loc.length - 1]}: {err.msg}</p>
-            ))}
-          </div>
-          <div className="pt-2 border-t border-border">
-            <p className="text-xs text-blue-400">
-              Using default parameters: NIFTY, Bullish outlook, 65% volatility, 15 DTE, 2.5% expected move
-            </p>
-          </div>
+          <span className="text-yellow-400 text-sm">Loading...</span>
         </div>
-      </CardWrapper>
+        <div className="animate-pulse">
+          <div className="h-4 bg-gray-700 rounded w-3/4 mb-2"></div>
+          <div className="h-4 bg-gray-700 rounded w-1/2"></div>
+        </div>
+      </div>
     );
   }
 
-  // Handle case where service responds but no strategy data
-  if (!data || !data.recommended_strategy) {
+  if (error || !specificTrade) {
     return (
-      <CardWrapper
-        title="Strategy Recommendation"
-        icon={Lightbulb}
-        isLoading={isLoading}
-        error={error}
-        isOnline={isOnline}
-        lastUpdated={lastUpdated}
-        serviceName="Strategy Service"
-      >
-        <div className="space-y-3">
-          <div className="flex items-center text-muted-foreground">
-            <Lightbulb className="h-5 w-5 mr-2" />
-            <span>No strategy recommendation available</span>
+      <div className="bg-gray-800 rounded-lg p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-2">
+            <span className="text-blue-400">🎯</span>
+            <h3 className="text-lg font-semibold text-white">Specific Trade Recommendation</h3>
           </div>
-          {error && (
-            <p className="text-xs text-red-400">Error: {error.message}</p>
-          )}
-          {data && (
-            <div className="text-xs text-muted-foreground">
-              <p>Raw response: {JSON.stringify(data, null, 2).substring(0, 200)}...</p>
-            </div>
-          )}
+          <span className="text-red-400 text-sm">Error</span>
         </div>
-      </CardWrapper>
+        <div className="text-red-400 text-sm">
+          {error || 'No trade data available'}
+        </div>
+      </div>
     );
   }
-
-  const strategy = data.recommended_strategy;
-  const marketAnalysis = data.market_analysis;
 
   return (
-    <CardWrapper
-      title="Strategy Recommendation"
-      icon={Lightbulb}
-      isLoading={isLoading}
-      error={error}
-      isOnline={isOnline}
-      lastUpdated={lastUpdated}
-      serviceName="Strategy Service"
-    >
-      <div className="space-y-3">
-        <h3 className="text-lg font-semibold text-accent">
-          {strategy.strategy_name || 'Unknown Strategy'} for {data.symbol || 'NIFTY'}
-        </h3>
-        
-        {strategy.confidence_score !== undefined && (
-          <ValueWithIcon 
-            icon={ShieldCheck} 
-            label="Confidence Score" 
-            value={strategy.confidence_score.toFixed(1)} 
-            unit="/100" 
-          />
-        )}
-        
-        {marketAnalysis?.volatility_regime && (
-          <ValueWithIcon 
-            icon={Activity} 
-            label="Volatility Regime" 
-            value={marketAnalysis.volatility_regime.toUpperCase()} 
-            badgeVariant={
-              marketAnalysis.volatility_regime.toLowerCase() === 'low' ? 'secondary' :
-              marketAnalysis.volatility_regime.toLowerCase() === 'medium' ? 'default' : 'destructive'
-            }
-          />
-        )}
-        
-        {strategy.risk_reward_ratio && (
-          <ValueWithIcon 
-            icon={BarChartBig} 
-            label="Risk/Reward Ratio" 
-            value={strategy.risk_reward_ratio} 
-          />
-        )}
+    <div className="bg-gray-800 rounded-lg p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-2">
+          <span className="text-blue-400">🎯</span>
+          <h3 className="text-lg font-semibold text-white">Specific Trade Recommendation</h3>
+        </div>
+        <div className="flex items-center space-x-2">
+          <span className={`px-2 py-1 rounded text-xs font-medium ${getTradeTypeColor(specificTrade.trade_type)}`}>
+            {specificTrade.trade_type}
+          </span>
+          <span className="text-green-400 text-sm">
+            Updated {formatTime(lastUpdated)}
+          </span>
+        </div>
+      </div>
 
-        {strategy.probability_of_profit !== undefined && (
-          <ValueWithIcon 
-            icon={TrendingUp} 
-            label="Probability of Profit" 
-            value={`${strategy.probability_of_profit}%`} 
-          />
-        )}
-        
-        {data.strategy_details && (
-          <div className="pt-2 border-t border-border mt-3">
-            <h4 className="text-sm font-medium mb-2">Strategy Details:</h4>
-            
-            <div className="space-y-1">
-              {strategy.max_profit !== undefined && (
-                <ValueWithIcon 
-                  icon={TrendingUp} 
-                  label="Max Profit" 
-                  value={strategy.max_profit === 'UNLIMITED' ? 'Unlimited' : `₹${Number(strategy.max_profit).toLocaleString()}`} 
-                />
-              )}
-              
-              {strategy.max_loss !== undefined && (
-                <ValueWithIcon 
-                  icon={TrendingDown} 
-                  label="Max Loss" 
-                  value={strategy.max_loss === 'UNLIMITED' ? 'Unlimited' : `₹${Number(strategy.max_loss).toLocaleString()}`} 
-                />
-              )}
-              
-              {data.strategy_details.legs && data.strategy_details.legs.length > 0 && (
-                <div className="mt-2">
-                  <p className="text-xs font-medium mb-1">Legs:</p>
-                  {data.strategy_details.legs.slice(0, 3).map((leg, index) => (
-                    <p key={index} className="text-xs text-muted-foreground">
-                      {leg.action || 'N/A'} {leg.quantity || 0} {leg.strike || 0} {leg.option_type || 'N/A'} @ ₹{leg.premium || 0}
-                    </p>
-                  ))}
-                </div>
-              )}
+      <div className="space-y-4">
+        {/* Strategy Header */}
+        <div>
+          <h4 className="text-lg font-medium text-blue-400 mb-1">
+            {specificTrade.strategy_name}
+          </h4>
+          <p className="text-gray-300 text-sm">
+            NIFTY @ {formatCurrency(specificTrade.current_spot)} • {specificTrade.market_situation}
+          </p>
+        </div>
+
+        {/* Trade Legs */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="bg-gray-700 rounded p-3">
+            <div className="flex items-center space-x-2 mb-2">
+              <span className="text-green-400 text-sm font-medium">BUY</span>
+              <span className="text-gray-300 text-sm">{specificTrade.trade_details.lots} lots</span>
+            </div>
+            <div className="text-white font-medium">{specificTrade.buy_contract.strike} CE</div>
+            <div className="text-gray-300 text-sm">{formatCurrency(specificTrade.buy_contract.mid_price)}</div>
+            <div className="text-xs text-gray-400">{specificTrade.buy_contract.symbol}</div>
+          </div>
+          
+          <div className="bg-gray-700 rounded p-3">
+            <div className="flex items-center space-x-2 mb-2">
+              <span className="text-red-400 text-sm font-medium">SELL</span>
+              <span className="text-gray-300 text-sm">{specificTrade.trade_details.lots} lots</span>
+            </div>
+            <div className="text-white font-medium">{specificTrade.sell_contract.strike} CE</div>
+            <div className="text-gray-300 text-sm">{formatCurrency(specificTrade.sell_contract.mid_price)}</div>
+            <div className="text-xs text-gray-400">{specificTrade.sell_contract.symbol}</div>
+          </div>
+        </div>
+
+        {/* Trade Metrics */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="text-center">
+            <div className="text-gray-400 text-xs">Investment</div>
+            <div className="text-white font-medium">{formatCurrency(specificTrade.trade_details.net_premium)}</div>
+          </div>
+          
+          <div className="text-center">
+            <div className="text-gray-400 text-xs">Max Profit</div>
+            <div className="text-green-400 font-medium">{formatCurrency(specificTrade.trade_details.max_profit)}</div>
+          </div>
+          
+          <div className="text-center">
+            <div className="text-gray-400 text-xs">Max Loss</div>
+            <div className="text-red-400 font-medium">{formatCurrency(specificTrade.trade_details.max_loss)}</div>
+          </div>
+          
+          <div className="text-center">
+            <div className="text-gray-400 text-xs">Breakeven</div>
+            <div className="text-blue-400 font-medium">{specificTrade.trade_details.breakeven.toFixed(0)}</div>
+          </div>
+        </div>
+
+        {/* Risk-Reward Analysis */}
+        <div className="bg-gray-700 rounded p-3">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-gray-300 text-sm">Risk-Reward Analysis</span>
+            <span className="text-blue-400 text-sm font-medium">
+              1:{getRiskRewardRatio().toFixed(2)}
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-xs">
+            <div className="text-gray-400">
+              Quantity: <span className="text-white">{specificTrade.trade_details.total_quantity}</span>
+            </div>
+            <div className="text-gray-400">
+              Spread: <span className="text-white">{specificTrade.sell_contract.strike - specificTrade.buy_contract.strike}pts</span>
+            </div>
+            <div className="text-gray-400">
+              Account Risk: <span className="text-white">{((specificTrade.trade_details.max_loss / 500000) * 100).toFixed(1)}%</span>
             </div>
           </div>
-        )}
+        </div>
+
+        {/* Quick Execution Checklist */}
+        <div className="border-t border-gray-700 pt-3">
+          <div className="flex items-center justify-between">
+            <h5 className="text-sm font-medium text-gray-300">Quick Actions</h5>
+            <button 
+              onClick={fetchSpecificTrade}
+              className="text-blue-400 hover:text-blue-300 text-xs"
+            >
+              Refresh
+            </button>
+          </div>
+          <div className="mt-2 space-y-1">
+            {specificTrade.execution_checklist.slice(0, 3).map((item, index) => (
+              <div key={index} className="text-xs text-gray-400 flex items-start">
+                <span className="text-blue-400 mr-1">•</span>
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
-    </CardWrapper>
+    </div>
   );
 };
 
