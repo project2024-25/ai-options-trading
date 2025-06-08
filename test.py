@@ -98,3 +98,44 @@ if __name__ == "__main__":
         print("📊 Ready to implement full technical analysis service!")
     else:
         print("\n❌ Need to debug basic setup first.")
+
+
+
+        {
+	"blocks": [
+		{
+			"type": "section",
+			"text": {
+				"type": "mrkdwn",
+				"text": "🚨 *TRADING SIGNAL ALERT*\n*Index:* NIFTY\n*Strategy:* Bull Call Spread (DEBIT)\n*Confidence:* 73.5%\n*Entry:* Buy: ₹245.66, Sell: ₹202.58\n*Target:* ₹1,385\n*Stop Loss:* ₹8,615"
+			}
+		},
+		{
+			"type": "actions",
+			"elements": [
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"emoji": true,
+						"text": "Approve"
+					},
+					"style": "primary",
+					"action_id": "approve_trade",
+					"value": "2025-06-01 11:14:48_NIFTY_Bull_Call_Spread_(DEBIT)"
+				},
+				{
+					"type": "button",
+					"text": {
+						"type": "plain_text",
+						"emoji": true,
+						"text": "Reject"
+					},
+					"style": "danger",
+					"action_id": "reject_trade",
+					"value": "2025-06-01 11:14:48_NIFTY_Bull_Call_Spread_(DEBIT)"
+				}
+			]
+		}
+	]
+}
