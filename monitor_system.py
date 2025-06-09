@@ -1,27 +1,14 @@
 #!/usr/bin/env python3
 """
-AI Options Trading System - Health Monitor
-Monitors all services and provides system status
+AI Options Trading System - Simple Health Monitor (Windows Compatible)
+No emojis - works on all Windows systems
 """
 
 import requests
 import time
-import logging
 from datetime import datetime
-import json
-import os
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('system_health.log'),
-        logging.StreamHandler()
-    ]
-)
-
-class TradingSystemMonitor:
+class SimpleSystemMonitor:
     def __init__(self):
         self.services = {
             'Data Acquisition': 8001,
@@ -37,158 +24,46 @@ class TradingSystemMonitor:
     def check_service_health(self, name, port):
         """Check individual service health"""
         try:
-            response = requests.get(f"http://localhost:{port}/health", timeout=5)
+            response = requests.get(f"http://localhost:{port}/health", timeout=10)
             if response.status_code == 200:
                 data = response.json()
                 status = data.get('status', 'unknown')
-                service_name = data.get('service', name)
                 
                 if status == 'healthy':
-                    logging.info(f"✅ {name} (:{port}) - {status.upper()}")
+                    print(f"[OK] {name} (:{port}) - {status.upper()}")
                     return True, status
                 else:
-                    logging.warning(f"⚠️  {name} (:{port}) - {status.upper()}")
+                    print(f"[WARN] {name} (:{port}) - {status.upper()}")
                     return True, status
             else:
-                logging.error(f"❌ {name} (:{port}) - HTTP {response.status_code}")
+                print(f"[ERROR] {name} (:{port}) - HTTP {response.status_code}")
                 return False, f"HTTP {response.status_code}"
         except requests.exceptions.ConnectionError:
-            logging.error(f"❌ {name} (:{port}) - CONNECTION REFUSED (Service not running)")
+            print(f"[ERROR] {name} (:{port}) - CONNECTION REFUSED (Service not running)")
             return False, "NOT_RUNNING"
         except requests.exceptions.Timeout:
-            logging.error(f"❌ {name} (:{port}) - TIMEOUT")
+            print(f"[ERROR] {name} (:{port}) - TIMEOUT (Service starting or overloaded)")
             return False, "TIMEOUT"
         except Exception as e:
-            logging.error(f"❌ {name} (:{port}) - ERROR: {str(e)}")
+            print(f"[ERROR] {name} (:{port}) - ERROR: {str(e)}")
             return False, str(e)
     
     def check_n8n_health(self):
         """Check N8N service health"""
         try:
-            # Try main N8N endpoint
-            response = requests.get(self.n8n_url, timeout=5)
+            response = requests.get(self.n8n_url, timeout=10)
             if response.status_code == 200:
-                logging.info("✅ N8N - HEALTHY (Web interface accessible)")
+                print("[OK] N8N - HEALTHY (Web interface accessible)")
                 return True, "HEALTHY"
             else:
-                logging.error(f"❌ N8N - HTTP {response.status_code}")
+                print(f"[ERROR] N8N - HTTP {response.status_code}")
                 return False, f"HTTP {response.status_code}"
         except requests.exceptions.ConnectionError:
-            logging.error("❌ N8N - CONNECTION REFUSED (Service not running)")
+            print("[ERROR] N8N - CONNECTION REFUSED (Service not running)")
             return False, "NOT_RUNNING"
-        except requests.exceptions.Timeout:
-            logging.error("❌ N8N - TIMEOUT")
-            return False, "TIMEOUT"
         except Exception as e:
-            logging.error(f"❌ N8N - ERROR: {str(e)}")
+            print(f"[ERROR] N8N - ERROR: {str(e)}")
             return False, str(e)
-    
-    def check_kite_connection(self):
-        """Check if Kite API connection is working"""
-        try:
-            response = requests.get("http://localhost:8001/health", timeout=5)
-            if response.status_code == 200:
-                data = response.json()
-                kite_status = data.get('checks', {}).get('kite', 'unknown')
-                
-                if isinstance(kite_status, dict):
-                    if kite_status.get('status') == 'connected':
-                        user = kite_status.get('user', 'Unknown')
-                        user_id = kite_status.get('user_id', '')
-                        mode = kite_status.get('mode', 'unknown')
-                        logging.info(f"✅ Kite API - CONNECTED (User: {user}, ID: {user_id}, Mode: {mode})")
-                        return True, f"Connected as {user} ({mode})"
-                    else:
-                        error_msg = kite_status.get('error', 'Connection failed')
-                        logging.warning(f"⚠️  Kite API - {error_msg}")
-                        return False, error_msg
-                else:
-                    if kite_status == 'not_configured':
-                        logging.warning("⚠️  Kite API - NOT CONFIGURED (Run zerodha_setup.py)")
-                        return False, "Not configured - run zerodha_setup.py"
-                    else:
-                        logging.warning(f"⚠️  Kite API - {kite_status}")
-                        return False, str(kite_status)
-        except Exception as e:
-            logging.error(f"❌ Kite API - ERROR: {str(e)}")
-            return False, str(e)
-    
-    def check_market_hours(self):
-        """Check if markets are open"""
-        try:
-            response = requests.get("http://localhost:8001/health", timeout=5)
-            if response.status_code == 200:
-                data = response.json()
-                market_status = data.get('checks', {}).get('market_hours', 'unknown')
-                
-                if market_status == 'open':
-                    logging.info("✅ Market Hours - OPEN")
-                    return True, "OPEN"
-                else:
-                    logging.info(f"ℹ️  Market Hours - {market_status.upper()}")
-                    return True, market_status.upper()
-        except Exception as e:
-            logging.warning(f"⚠️  Market Hours - Cannot determine: {str(e)}")
-            return False, "UNKNOWN"
-    
-    def full_system_check(self):
-        """Perform complete system health check"""
-        print("\n" + "="*70)
-        print(f"🤖 AI OPTIONS TRADING SYSTEM - HEALTH CHECK")
-        print(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        print("="*70)
-        
-        all_healthy = True
-        service_status = {}
-        
-        # Check Python services
-        print("\n🔧 PYTHON SERVICES:")
-        print("-" * 40)
-        for name, port in self.services.items():
-            healthy, status = self.check_service_health(name, port)
-            service_status[name] = {'healthy': healthy, 'status': status}
-            if not healthy:
-                all_healthy = False
-        
-        # Check N8N
-        print("\n🔄 WORKFLOW ENGINE:")
-        print("-" * 40)
-        n8n_healthy, n8n_status = self.check_n8n_health()
-        service_status['N8N'] = {'healthy': n8n_healthy, 'status': n8n_status}
-        if not n8n_healthy:
-            all_healthy = False
-        
-        # Check Kite API
-        print("\n📡 MARKET DATA:")
-        print("-" * 40)
-        kite_healthy, kite_status = self.check_kite_connection()
-        service_status['Kite API'] = {'healthy': kite_healthy, 'status': kite_status}
-        
-        # Check Market Hours
-        market_healthy, market_status = self.check_market_hours()
-        service_status['Market Hours'] = {'healthy': market_healthy, 'status': market_status}
-        
-        # Overall status
-        print("\n" + "="*70)
-        if all_healthy:
-            print("🟢 OVERALL STATUS: ALL SYSTEMS OPERATIONAL")
-            print("✅ Ready for trading operations")
-        else:
-            print("🔴 OVERALL STATUS: ISSUES DETECTED")
-            print("⚠️  Some services need attention")
-        
-        print("="*70)
-        
-        # Summary
-        print(f"\n📊 SUMMARY:")
-        healthy_count = sum(1 for status in service_status.values() if status['healthy'])
-        total_count = len(service_status)
-        print(f"   • Services Running: {healthy_count}/{total_count}")
-        print(f"   • Market Status: {market_status}")
-        print(f"   • Kite API: {kite_status}")
-        print(f"   • System Health: {'GOOD' if all_healthy else 'NEEDS ATTENTION'}")
-        
-        return all_healthy, service_status
     
     def quick_check(self):
         """Quick health check without detailed output"""
@@ -196,77 +71,124 @@ class TradingSystemMonitor:
             healthy_services = 0
             total_services = len(self.services) + 1  # +1 for N8N
             
+            print("\n" + "="*60)
+            print("AI OPTIONS TRADING SYSTEM - QUICK HEALTH CHECK")
+            print(f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+            print("="*60)
+            
             # Check Python services
+            print("\nPYTHON SERVICES:")
+            print("-" * 40)
             for name, port in self.services.items():
                 try:
-                    response = requests.get(f"http://localhost:{port}/health", timeout=3)
+                    response = requests.get(f"http://localhost:{port}/health", timeout=8)
                     if response.status_code == 200:
+                        print(f"[OK] {name}")
                         healthy_services += 1
-                except:
-                    pass
+                    else:
+                        print(f"[ERROR] {name} - HTTP {response.status_code}")
+                except requests.exceptions.Timeout:
+                    print(f"[WARN] {name} - STARTING (timeout - give it more time)")
+                except requests.exceptions.ConnectionError:
+                    print(f"[ERROR] {name} - NOT RUNNING")
+                except Exception as e:
+                    print(f"[ERROR] {name} - {str(e)[:50]}")
             
             # Check N8N
+            print("\nWORKFLOW ENGINE:")
+            print("-" * 40)
             try:
-                response = requests.get(self.n8n_url, timeout=3)
+                response = requests.get(self.n8n_url, timeout=5)
                 if response.status_code == 200:
+                    print("[OK] N8N - HEALTHY")
                     healthy_services += 1
+                else:
+                    print(f"[ERROR] N8N - HTTP {response.status_code}")
             except:
-                pass
+                print("[ERROR] N8N - NOT ACCESSIBLE")
             
+            # Summary
+            print("\n" + "="*60)
             health_percentage = (healthy_services / total_services) * 100
-            print(f"System Health: {healthy_services}/{total_services} services ({health_percentage:.1f}%)")
+            print(f"SYSTEM HEALTH: {healthy_services}/{total_services} services ({health_percentage:.1f}%)")
             
-            return health_percentage >= 85  # Consider healthy if 85%+ services are up
+            if health_percentage >= 85:
+                print("STATUS: GOOD - System ready for trading")
+            elif health_percentage >= 50:
+                print("STATUS: DEGRADED - Some services need attention")
+            else:
+                print("STATUS: CRITICAL - System needs troubleshooting")
+                
+            print("="*60)
+            
+            return health_percentage >= 50
             
         except Exception as e:
             print(f"Health check error: {e}")
             return False
     
-    def continuous_monitoring(self, interval_minutes=15):
-        """Run continuous monitoring"""
-        print(f"Starting continuous monitoring (every {interval_minutes} minutes)")
-        print("Press Ctrl+C to stop")
+    def wait_for_services(self, max_wait_minutes=5):
+        """Wait for services to start up"""
+        print(f"\nWaiting for services to start (max {max_wait_minutes} minutes)...")
         
-        try:
-            while True:
-                self.full_system_check()
-                print(f"\n⏱️  Waiting {interval_minutes} minutes for next check...")
-                time.sleep(interval_minutes * 60)
-        except KeyboardInterrupt:
-            print("\n\n🛑 Monitoring stopped by user")
-        except Exception as e:
-            print(f"\n❌ Monitoring error: {e}")
+        for minute in range(max_wait_minutes):
+            print(f"\nCheck {minute + 1}/{max_wait_minutes}:")
+            
+            all_healthy = True
+            for name, port in self.services.items():
+                try:
+                    response = requests.get(f"http://localhost:{port}/health", timeout=3)
+                    if response.status_code == 200:
+                        print(f"  [OK] {name}")
+                    else:
+                        print(f"  [WAIT] {name} - Starting...")
+                        all_healthy = False
+                except:
+                    print(f"  [WAIT] {name} - Starting...")
+                    all_healthy = False
+            
+            if all_healthy:
+                print(f"\n[SUCCESS] All services are healthy after {minute + 1} minute(s)!")
+                return True
+            
+            if minute < max_wait_minutes - 1:
+                print("Waiting 60 seconds for next check...")
+                time.sleep(60)
+        
+        print(f"\n[WARNING] Some services still starting after {max_wait_minutes} minutes")
+        return False
 
 def main():
     """Main function"""
-    monitor = TradingSystemMonitor()
+    monitor = SimpleSystemMonitor()
     
-    print("🤖 AI Options Trading System Monitor")
+    print("AI Options Trading System - Simple Monitor")
     print("Choose an option:")
-    print("1. Full System Check")
-    print("2. Quick Health Check")
-    print("3. Continuous Monitoring (15 min intervals)")
-    print("4. Continuous Monitoring (5 min intervals)")
+    print("1. Quick Health Check")
+    print("2. Wait for Services to Start")
+    print("3. Continuous Monitor (5 min intervals)")
     
     try:
-        choice = input("\nEnter choice (1-4): ").strip()
+        choice = input("\nEnter choice (1-3): ").strip()
         
         if choice == '1':
-            monitor.full_system_check()
+            monitor.quick_check()
         elif choice == '2':
+            monitor.wait_for_services()
             monitor.quick_check()
         elif choice == '3':
-            monitor.continuous_monitoring(15)
-        elif choice == '4':
-            monitor.continuous_monitoring(5)
+            while True:
+                monitor.quick_check()
+                print("\nWaiting 5 minutes for next check...")
+                time.sleep(300)
         else:
-            print("Invalid choice, running full system check...")
-            monitor.full_system_check()
+            print("Invalid choice, running quick check...")
+            monitor.quick_check()
             
     except KeyboardInterrupt:
-        print("\n\n👋 Monitor stopped by user")
+        print("\n\nMonitor stopped by user")
     except Exception as e:
-        print(f"\n❌ Error: {e}")
+        print(f"\nError: {e}")
 
 if __name__ == "__main__":
     main()

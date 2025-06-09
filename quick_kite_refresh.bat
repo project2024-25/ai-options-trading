@@ -21,7 +21,7 @@ echo.
 echo ⚠️  IMPORTANT: Select option 5 (Regenerate access token)
 echo.
 
-python zerodha_setup.py
+python setup_zerodha.py
 
 echo.
 echo ========================================

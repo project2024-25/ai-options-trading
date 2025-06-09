@@ -12,9 +12,20 @@ REM Change to project directory
 cd /d "D:\Omkar\Algo trading bot\ai-options-trading"
 
 REM Check if virtual environment exists
-if not exist "Scripts\activate.bat" (
+if exist "Scripts\activate.bat" (
+    echo Virtual environment found: Scripts\activate.bat
+    call Scripts\activate.bat
+) else if exist "venv\Scripts\activate.bat" (
+    echo Virtual environment found: venv\Scripts\activate.bat
+    call venv\Scripts\activate.bat
+) else if exist ".venv\Scripts\activate.bat" (
+    echo Virtual environment found: .venv\Scripts\activate.bat
+    call .venv\Scripts\activate.bat
+) else (
     echo ❌ Virtual environment not found!
-    echo Please check the project path and virtual environment.
+    echo Available directories:
+    dir /b | findstr /i script
+    echo Please check your virtual environment setup
     pause
     exit /b 1
 )
@@ -24,7 +35,6 @@ echo.
 
 REM Activate virtual environment
 echo 🔧 Activating virtual environment...
-call Scripts\activate
 if errorlevel 1 (
     echo ❌ Failed to activate virtual environment
     pause
