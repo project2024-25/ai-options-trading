@@ -11,6 +11,22 @@ interface FetchState<T> {
 
 const REFRESH_INTERVAL = 30 * 1000; // 30 seconds
 
+// Helper function to extract data from API response
+function extractResponseData<T>(response: any): T {
+  // Handle nested response format: { success: true, data: {...} }
+  if (response && typeof response === 'object' && response.success && response.data) {
+    return response.data as T;
+  }
+  
+  // Handle direct response format: {...}
+  if (response && typeof response === 'object' && !response.success) {
+    return response as T;
+  }
+  
+  // Fallback
+  return response as T;
+}
+
 export function useDataFetching<T>(apiUrl: string, initialData: T | null = null): FetchState<T> {
   const [data, setData] = useState<T | null>(initialData);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -34,12 +50,23 @@ export function useDataFetching<T>(apiUrl: string, initialData: T | null = null)
         }
         throw errorData;
       }
+      
       const result = await response.json();
-      setData(result);
+      
+      // Extract the actual data from the response
+      const extractedData = extractResponseData<T>(result);
+      
+      // Debug logging
+      console.log(`API Response from ${apiUrl}:`, result);
+      console.log(`Extracted data:`, extractedData);
+      
+      setData(extractedData);
       setError(null);
       setIsOnline(true);
       setLastUpdated(Date.now());
     } catch (err: any) {
+      console.error(`Error fetching ${apiUrl}:`, err);
+      
       if (err.message && typeof err.message === 'string') {
         setError({ message: err.message, statusCode: err.statusCode });
       } else {
