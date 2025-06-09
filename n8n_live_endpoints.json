@@ -1,0 +1,28 @@
+{
+  "market_data": {
+    "nifty_snapshot": "http://host.docker.internal:8001/api/data/nifty-snapshot",
+    "banknifty_snapshot": "http://host.docker.internal:8001/api/data/banknifty-snapshot",
+    "options_chain_nifty": "http://host.docker.internal:8001/api/data/options-chain/NIFTY",
+    "options_chain_banknifty": "http://host.docker.internal:8001/api/data/options-chain/BANKNIFTY"
+  },
+  "technical_analysis": {
+    "nifty_indicators": "http://host.docker.internal:8002/api/analysis/indicators/NIFTY",
+    "banknifty_indicators": "http://host.docker.internal:8002/api/analysis/indicators/BANKNIFTY",
+    "support_resistance": "http://host.docker.internal:8002/api/analysis/levels/{symbol}"
+  },
+  "strategy_signals": {
+    "nifty_signals": "http://host.docker.internal:8004/api/strategy/signals/NIFTY",
+    "banknifty_signals": "http://host.docker.internal:8004/api/strategy/signals/BANKNIFTY",
+    "strategy_backtest": "http://host.docker.internal:8004/api/strategy/backtest/{strategy}"
+  },
+  "options_analytics": {
+    "greeks_calculation": "http://host.docker.internal:8006/api/options/greeks/{symbol}",
+    "iv_analysis": "http://host.docker.internal:8006/api/options/iv-surface/{symbol}",
+    "volatility_analysis": "http://host.docker.internal:8006/api/options/volatility/{symbol}"
+  },
+  "risk_management": {
+    "position_sizing": "http://host.docker.internal:8005/api/risk/position-sizing",
+    "portfolio_risk": "http://host.docker.internal:8005/api/risk/portfolio-risk",
+    "risk_limits": "http://host.docker.internal:8005/api/risk/limits"
+  }
+}

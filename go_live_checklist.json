@@ -1,0 +1,34 @@
+{
+  "pre_live_verification": {
+    "system_health": "\u2705 All 7 services running and healthy",
+    "kite_api": "Configure live Kite API credentials",
+    "google_sheets": "\u2705 Real-time data logging working",
+    "slack_integration": "\u2705 Approval workflow tested",
+    "n8n_workflows": "\u2705 Signal generation automated",
+    "risk_management": "\u2705 Position limits configured",
+    "paper_trading": "\u2705 System tested extensively"
+  },
+  "go_live_steps": [
+    "1. Final system health check",
+    "2. Configure live Kite API credentials",
+    "3. Set PAPER_TRADING=false in .env",
+    "4. Restart Order Execution service",
+    "5. Start with minimum position size (1 lot)",
+    "6. Monitor first trade execution closely",
+    "7. Verify P&L tracking accuracy",
+    "8. Validate all alert systems"
+  ],
+  "safety_stops": {
+    "daily_loss_limit": "\u20b95,000 maximum loss per day",
+    "position_limit": "1 lot maximum per position",
+    "trade_limit": "3 trades maximum per day",
+    "emergency_stop": "Manual stop via Slack command",
+    "system_monitoring": "Continuous health monitoring"
+  },
+  "monitoring_plan": {
+    "first_hour": "Monitor every trade execution",
+    "first_day": "Check P&L every 30 minutes",
+    "first_week": "Daily performance review",
+    "ongoing": "Weekly strategy optimization"
+  }
+}

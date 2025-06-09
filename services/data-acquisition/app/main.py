@@ -17,6 +17,9 @@ from fastapi.responses import JSONResponse
 # Simple import - using KiteConnect directly
 from kiteconnect import KiteConnect
 
+import json
+from pathlib import Path
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -35,6 +38,65 @@ class Settings:
     KITE_ACCESS_TOKEN = ""
 
 settings = Settings()
+
+class LiveDataCache:
+    """Cache for storing last live market data"""
+    
+    def __init__(self):
+        self.cache_dir = Path("data_cache")
+        self.cache_dir.mkdir(exist_ok=True)
+        self.cache_file = self.cache_dir / "last_live_data.json"
+        
+    def save_live_data(self, symbol: str, data: dict):
+        """Save live data to cache"""
+        try:
+            # Load existing cache
+            cache_data = {}
+            if self.cache_file.exists():
+                with open(self.cache_file, 'r') as f:
+                    cache_data = json.load(f)
+            
+            # Update with new data
+            cache_data[symbol] = {
+                **data,
+                "cached_at": datetime.now().isoformat(),
+                "market_time": "15:30" if not is_market_hours() else datetime.now().strftime("%H:%M")
+            }
+            
+            # Save back to file
+            with open(self.cache_file, 'w') as f:
+                json.dump(cache_data, f, indent=2)
+            
+            logger.info(f"✅ Cached live data for {symbol}")
+            
+        except Exception as e:
+            logger.error(f"Error saving cache for {symbol}: {e}")
+    
+    def get_cached_data(self, symbol: str):
+        """Get last live data from cache"""
+        try:
+            if self.cache_file.exists():
+                with open(self.cache_file, 'r') as f:
+                    cache_data = json.load(f)
+                
+                if symbol in cache_data:
+                    cached_entry = cache_data[symbol]
+                    # Update timestamp but keep original data
+                    cached_entry["timestamp"] = datetime.now().isoformat()
+                    cached_entry["source"] = "last_live_data"
+                    cached_entry["note"] = f"Last live data from market close (3:30 PM)"
+                    
+                    logger.info(f"✅ Retrieved cached live data for {symbol}")
+                    return cached_entry
+            
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error reading cache for {symbol}: {e}")
+            return None
+        
+live_cache = LiveDataCache()
+
 
 # Global Kite client
 kite_client: Optional[KiteConnect] = None
@@ -175,15 +237,15 @@ async def health_check():
 
 @app.get("/api/data/nifty-snapshot")
 async def get_nifty_snapshot():
-    """Get live NIFTY snapshot"""
+    """Get live NIFTY snapshot or last live data outside market hours"""
     try:
-        if kite_client:
+        if kite_client and is_market_hours():
             try:
-                # Get live NIFTY data
+                # Get live NIFTY data during market hours
                 quote = kite_client.quote(["NSE:NIFTY 50"])
                 nifty_data = quote["NSE:NIFTY 50"]
                 
-                return {
+                live_data = {
                     "success": True,
                     "data": {
                         "symbol": "NIFTY",
@@ -202,29 +264,53 @@ async def get_nifty_snapshot():
                     "timestamp": datetime.now().isoformat()
                 }
                 
+                # Cache this live data for later use
+                live_cache.save_live_data("NIFTY", live_data["data"])
+                
+                return live_data
+                
             except Exception as e:
                 logger.error(f"Error getting live NIFTY data: {e}")
-                # Fall back to mock data
+                # Fall back to cached data
+                cached = live_cache.get_cached_data("NIFTY")
+                if cached:
+                    return {
+                        "success": True,
+                        "data": cached,
+                        "source": "last_live_data",
+                        "timestamp": datetime.now().isoformat()
+                    }
                 return await get_mock_index_data("NIFTY")
+        
         else:
-            return await get_mock_index_data("NIFTY")
+            # Outside market hours - try to get cached live data first
+            cached_data = live_cache.get_cached_data("NIFTY")
+            if cached_data:
+                return {
+                    "success": True,
+                    "data": cached_data,
+                    "source": "last_live_data",
+                    "timestamp": datetime.now().isoformat()
+                }
+            else:
+                # No cached data available, fall back to mock
+                return await get_mock_index_data("NIFTY")
         
     except Exception as e:
         logger.error(f"Error in NIFTY snapshot endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @app.get("/api/data/banknifty-snapshot")
 async def get_banknifty_snapshot():
-    """Get live BANKNIFTY snapshot"""
+    """Get live BANKNIFTY snapshot or last live data outside market hours"""
     try:
-        if kite_client:
+        if kite_client and is_market_hours():
             try:
-                # Get live BANKNIFTY data
+                # Get live BANKNIFTY data during market hours
                 quote = kite_client.quote(["NSE:NIFTY BANK"])
                 banknifty_data = quote["NSE:NIFTY BANK"]
                 
-                return {
+                live_data = {
                     "success": True,
                     "data": {
                         "symbol": "BANKNIFTY",
@@ -243,28 +329,53 @@ async def get_banknifty_snapshot():
                     "timestamp": datetime.now().isoformat()
                 }
                 
+                # Cache this live data for later use
+                live_cache.save_live_data("BANKNIFTY", live_data["data"])
+                
+                return live_data
+                
             except Exception as e:
                 logger.error(f"Error getting live BANKNIFTY data: {e}")
+                # Fall back to cached data
+                cached = live_cache.get_cached_data("BANKNIFTY")
+                if cached:
+                    return {
+                        "success": True,
+                        "data": cached,
+                        "source": "last_live_data",
+                        "timestamp": datetime.now().isoformat()
+                    }
                 return await get_mock_index_data("BANKNIFTY")
+        
         else:
-            return await get_mock_index_data("BANKNIFTY")
+            # Outside market hours - try to get cached live data first
+            cached_data = live_cache.get_cached_data("BANKNIFTY")
+            if cached_data:
+                return {
+                    "success": True,
+                    "data": cached_data,
+                    "source": "last_live_data",
+                    "timestamp": datetime.now().isoformat()
+                }
+            else:
+                # No cached data available, fall back to mock
+                return await get_mock_index_data("BANKNIFTY")
         
     except Exception as e:
         logger.error(f"Error in BANKNIFTY snapshot endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-
 @app.get("/api/data/vix-data")
 async def get_vix_data():
-    """Get live VIX data"""
+    """Get live VIX data or last live data outside market hours"""
     try:
-        if kite_client:
+        if kite_client and is_market_hours():
             try:
-                # Get live VIX data
+                # Get live VIX data during market hours
                 quote = kite_client.quote(["NSE:INDIA VIX"])
                 vix_data = quote["NSE:INDIA VIX"]
                 
-                return {
+                live_data = {
                     "success": True,
                     "data": {
                         "symbol": "VIX",
@@ -281,16 +392,41 @@ async def get_vix_data():
                     "timestamp": datetime.now().isoformat()
                 }
                 
+                # Cache this live data for later use
+                live_cache.save_live_data("VIX", live_data["data"])
+                
+                return live_data
+                
             except Exception as e:
                 logger.error(f"Error getting live VIX data: {e}")
+                # Fall back to cached data
+                cached = live_cache.get_cached_data("VIX")
+                if cached:
+                    return {
+                        "success": True,
+                        "data": cached,
+                        "source": "last_live_data",
+                        "timestamp": datetime.now().isoformat()
+                    }
                 return await get_mock_index_data("VIX")
+        
         else:
-            return await get_mock_index_data("VIX")
+            # Outside market hours - try to get cached live data first
+            cached_data = live_cache.get_cached_data("VIX")
+            if cached_data:
+                return {
+                    "success": True,
+                    "data": cached_data,
+                    "source": "last_live_data",
+                    "timestamp": datetime.now().isoformat()
+                }
+            else:
+                # No cached data available, fall back to mock
+                return await get_mock_index_data("VIX")
         
     except Exception as e:
         logger.error(f"Error in VIX data endpoint: {e}")
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @app.get("/api/data/options-chain/{underlying}")
 async def get_options_chain(

@@ -1,0 +1,70 @@
+{
+  "name": "Live Market Data Collection",
+  "active": true,
+  "nodes": [
+    {
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "value": 5
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get NIFTY Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "url": "http://host.docker.internal:8001/api/data/nifty-snapshot",
+        "method": "GET",
+        "timeout": 10000
+      }
+    },
+    {
+      "name": "Get Technical Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "parameters": {
+        "url": "http://host.docker.internal:8002/api/analysis/indicators/NIFTY",
+        "method": "GET",
+        "timeout": 10000
+      }
+    },
+    {
+      "name": "Update Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "parameters": {
+        "operation": "append",
+        "sheetId": "1WM6NrthrfDDFD8HWEdh1cTcsrAH-DK31hekKY6GPMMo",
+        "range": "LiveData!A:E"
+      }
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          "Get NIFTY Data"
+        ]
+      ]
+    },
+    "Get NIFTY Data": {
+      "main": [
+        [
+          "Get Technical Analysis"
+        ]
+      ]
+    },
+    "Get Technical Analysis": {
+      "main": [
+        [
+          "Update Google Sheets"
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "NIFTY": {
+    "symbol": "NIFTY",
+    "ltp": 25103.2,
+    "open": 25160.1,
+    "high": 25160.1,
+    "low": 25077.15,
+    "close": 25003.05,
+    "change": 100.15,
+    "volume": 0,
+    "oi": 0,
+    "instrument_token": 256265,
+    "timestamp": "2025-06-09T17:25:59.068655",
+    "cached_at": "2025-06-09T17:25:59.068655",
+    "market_time": "15:30"
+  },
+  "BANKNIFTY": {
+    "symbol": "BANKNIFTY",
+    "ltp": 56839.6,
+    "open": 57049.5,
+    "high": 57049.5,
+    "low": 56792.7,
+    "close": 56578.4,
+    "change": 261.2,
+    "volume": 0,
+    "oi": 0,
+    "instrument_token": 260105,
+    "timestamp": "2025-06-09T17:25:59.068655",
+    "cached_at": "2025-06-09T17:25:59.068655",
+    "market_time": "15:30"
+  },
+  "VIX": {
+    "symbol": "VIX",
+    "ltp": 14.69,
+    "open": 14.63,
+    "high": 15.52,
+    "low": 14.63,
+    "close": 14.63,
+    "change": 0.06,
+    "instrument_token": 264969,
+    "timestamp": "2025-06-09T17:25:59.068655",
+    "cached_at": "2025-06-09T17:25:59.068655",
+    "market_time": "15:30"
+  }
+}
